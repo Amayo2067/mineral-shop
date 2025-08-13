@@ -119,8 +119,8 @@ async function seedProducts() {
 
 // Middleware
 app.use(express.json());
-// Edit this line to serve the static files from the current directory
-app.use(express.static(__dirname));
+// Serve static files from the parent directory to access images
+app.use(express.static(path.join(__dirname, '..')));
 
 // API Endpoints
 app.post('/api/register', async (req, res) => {
