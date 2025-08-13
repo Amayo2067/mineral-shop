@@ -6,7 +6,7 @@ analytics.page();
 }}();
 
 // API base URL - change this to your Render URL when deployed
-const API_BASE_URL = 'http://localhost:3000';
+const API_BASE_URL = 'https://mineral-shop.onrender.com';
 
 // Products array - will be populated from backend
 let products = [];
@@ -25,11 +25,11 @@ async function loadProducts() {
     console.error('Error loading products:', error);
     // Fallback to default products if backend is not available
     products = [
-      { id: 1, name: "Opal Crystal", price: 50.00, image: "images/mineral1.png", description: "A stunning clear quartz crystal, perfect for collectors." },
-      { id: 2, name: "Lava Geode", price: 70.00, image: "images/mineral2.png", description: "A vibrant amethyst geode with deep purple hues." },
-      { id: 3, name: "Ocean Quartz", price: 30.00, image: "images/mineral3.png", description: "A soft pink rose quartz, symbolizing love." },
-      { id: 4, name: "Thunder Cluster", price: 40.00, image: "images/mineral4.png", description: "A bright citrine cluster, radiating positivity." },
-      { id: 5, name: "Moss Stone", price: 90.00, image: "images/mineral5.png", description: "A sleek black obsidian stone, grounding and protective." }
+      { id: 1, name: "Opal Crystal", price: 50.00, image: "./images/mineral1.png", description: "A stunning clear quartz crystal, perfect for collectors." },
+      { id: 2, name: "Lava Geode", price: 70.00, image: "./images/mineral2.png", description: "A vibrant amethyst geode with deep purple hues." },
+      { id: 3, name: "Ocean Quartz", price: 30.00, image: "./images/mineral3.png", description: "A soft pink rose quartz, symbolizing love." },
+      { id: 4, name: "Thunder Cluster", price: 40.00, image: "./images/mineral4.png", description: "A bright citrine cluster, radiating positivity." },
+      { id: 5, name: "Moss Stone", price: 90.00, image: "./images/mineral5.png", description: "A sleek black obsidian stone, grounding and protective." }
     ];
   }
 }
