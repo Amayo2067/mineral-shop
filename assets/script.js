@@ -157,7 +157,9 @@ async function addToCart(productId) {
     // If we're on the cart page, refresh the display
     if (window.location.pathname.includes("cart.html")) {
       try {
+        console.log(`On cart page, refreshing display...`);
         await displayCart();
+        console.log(`Cart display refreshed after adding item`);
       } catch (displayError) {
         console.error("Failed to refresh cart display:", displayError);
       }
@@ -386,7 +388,8 @@ async function displayCart() {
           totalPrice += itemTotal;
           totalItems += quantity;
           
-          console.log(`Displaying product ${id} with quantity ${quantity}`);
+          console.log(`Displaying product ${id} with quantity ${quantity} (backend)`);
+          console.log(`Product details:`, product);
           
           const cartItem = document.createElement('div');
           cartItem.className = 'cart-item bg-white rounded-xl shadow-lg overflow-hidden fade-in';
@@ -502,6 +505,7 @@ async function displayCart() {
           totalItems += quantity;
           
           console.log(`Displaying product ${id} with quantity ${quantity} (localStorage fallback)`);
+          console.log(`Product details (localStorage):`, product);
           
           const cartItem = document.createElement('div');
           cartItem.className = 'cart-item bg-white rounded-xl shadow-lg overflow-hidden fade-in';
@@ -626,6 +630,7 @@ async function displayCart() {
 
 async function removeFromCart(productId) {
   try {
+    console.log(`removeFromCart called with productId: ${productId}`);
     const username = localStorage.getItem("username");
     if (!username) {
       showNotification("Please register to manage cart!", "error");
@@ -669,6 +674,8 @@ async function removeFromCart(productId) {
           let cart = JSON.parse(localStorage.getItem("cart") || "[]");
           cart = cart.filter(id => id !== productId);
           localStorage.setItem("cart", JSON.stringify(cart));
+          
+          console.log(`Item removed from cart. Updated localStorage:`, cart);
           
           analytics.track("Removed from Cart", { productId: productId });
           showNotification("Item removed from cart!", "success");
@@ -854,7 +861,9 @@ async function updateCartQuantity(productId, newQuantity) {
     updateCartCount();
     
     // Refresh cart display
+    console.log(`About to refresh cart display...`);
     await displayCart();
+    console.log(`Cart display refreshed`);
     
     // Check if cart is now empty and reset promo code if needed
     resetPromoCodeIfCartEmpty();
