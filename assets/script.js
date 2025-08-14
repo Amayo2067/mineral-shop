@@ -105,6 +105,7 @@ async function addToFavorites(productId) {
 
 async function addToCart(productId) {
   try {
+    console.log(`addToCart called with productId: ${productId}`);
     const username = localStorage.getItem("username");
     if (!username) {
       showNotification("Please register to add items to cart!", "error");
@@ -115,6 +116,8 @@ async function addToCart(productId) {
     let cart = JSON.parse(localStorage.getItem("cart") || "[]");
     cart.push(productId);
     localStorage.setItem("cart", JSON.stringify(cart));
+    
+    console.log(`Added product ${productId} to cart. New cart:`, cart);
     
     // Update cart count immediately
     updateCartCount();
@@ -316,6 +319,7 @@ async function displayFavorites() {
 
 async function displayCart() {
   try {
+    console.log("displayCart function called");
     const cartList = document.getElementById("cart-list");
     const cartSummary = document.getElementById("cart-summary");
     const emptyCart = document.getElementById("empty-cart");
@@ -376,6 +380,8 @@ async function displayCart() {
           const itemTotal = product.price * quantity;
           totalPrice += itemTotal;
           totalItems += quantity;
+          
+          console.log(`Displaying product ${id} with quantity ${quantity}`);
           
           const cartItem = document.createElement('div');
           cartItem.className = 'cart-item bg-white rounded-xl shadow-lg overflow-hidden fade-in';
@@ -484,6 +490,8 @@ async function displayCart() {
           const itemTotal = product.price * quantity;
           totalPrice += itemTotal;
           totalItems += quantity;
+          
+          console.log(`Displaying product ${id} with quantity ${quantity} (localStorage fallback)`);
           
           const cartItem = document.createElement('div');
           cartItem.className = 'cart-item bg-white rounded-xl shadow-lg overflow-hidden fade-in';
@@ -703,6 +711,8 @@ async function removeFromCart(productId) {
 
 async function updateCartQuantity(productId, newQuantity) {
   try {
+    console.log(`updateCartQuantity called with productId: ${productId}, newQuantity: ${newQuantity}`);
+    
     if (newQuantity <= 0) {
       await removeFromCart(productId);
       return;
@@ -817,6 +827,8 @@ async function updateCartQuantity(productId, newQuantity) {
     
     showNotification(`Quantity updated to ${newQuantity}!`, "success");
     
+    console.log(`Cart updated successfully. New quantity for product ${productId}: ${newQuantity}`);
+    
     // Update cart count
     updateCartCount();
     
@@ -909,6 +921,8 @@ function updateCartCount() {
     
     const cart = JSON.parse(localStorage.getItem("cart") || "[]");
     const count = cart.length;
+    
+    console.log(`updateCartCount: Cart has ${count} items:`, cart);
     
     if (count > 0) {
       cartCountElement.textContent = count;
