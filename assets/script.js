@@ -127,25 +127,25 @@ async function addToCart(productId) {
     
     // Try to add to backend
     try {
-      const response = await fetch(`${API_BASE_URL}/api/cart`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({ username, productId })
-      });
-      
-      if (response.ok) {
+    const response = await fetch(`${API_BASE_URL}/api/cart`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({ username, productId })
+    });
+    
+    if (response.ok) {
         console.log("Successfully added to backend cart");
-        
+      
         // Track analytics
         try {
-          analytics.track("Added to Cart", { productId: productId });
+      analytics.track("Added to Cart", { productId: productId });
         } catch (analyticsError) {
           console.warn("Analytics tracking failed:", analyticsError);
         }
-      } else {
-        const errorData = await response.json();
+    } else {
+      const errorData = await response.json();
         console.warn("Backend add to cart failed:", errorData);
         showNotification(`Backend sync failed: ${errorData.message || 'Unknown error'}`, "warning");
       }
@@ -352,6 +352,9 @@ async function displayCart() {
     if (response.ok) {
       const cart = await response.json();
       
+      console.log(`Backend response status: ${response.status}`);
+      console.log(`Backend cart data:`, cart);
+      
       if (cart.length === 0) {
         cartList.innerHTML = "";
         cartSummary.classList.add("hidden");
@@ -366,8 +369,7 @@ async function displayCart() {
         cartCounts[id] = (cartCounts[id] || 0) + 1;
       });
       
-      console.log(`Backend cart data:`, cart);
-      console.log(`Calculated cart counts:`, cartCounts);
+      console.log(`Calculated cart counts from backend:`, cartCounts);
       
       let totalPrice = 0;
       let totalItems = 0;
@@ -465,7 +467,10 @@ async function displayCart() {
       
     } else {
       // Fallback to localStorage
+      console.log(`Backend failed, using localStorage fallback`);
       const cart = JSON.parse(localStorage.getItem("cart") || "[]");
+      
+      console.log(`localStorage cart data:`, cart);
       
       if (cart.length === 0) {
         cartList.innerHTML = "";
@@ -481,7 +486,6 @@ async function displayCart() {
         cartCounts[id] = (cartCounts[id] || 0) + 1;
       });
       
-      console.log(`localStorage cart data:`, cart);
       console.log(`Calculated cart counts (localStorage):`, cartCounts);
       
       let totalPrice = 0;
@@ -603,8 +607,8 @@ async function displayCart() {
               <p>Check console for more information.</p>
             </div>
           </div>
-        </div>
-      `;
+            </div>
+          `;
     }
     
     // Also try to show cart summary if possible
@@ -811,6 +815,7 @@ async function updateCartQuantity(productId, newQuantity) {
     let cart = JSON.parse(localStorage.getItem("cart") || "[]");
     
     console.log(`Before update: Cart had ${cart.filter(id => id == productId).length} instances of product ${productId}`);
+    console.log(`Current cart before update:`, cart);
     
     if (newQuantity === 0) {
       cart = cart.filter(id => id !== productId);
@@ -826,6 +831,11 @@ async function updateCartQuantity(productId, newQuantity) {
     console.log(`Updated cart:`, cart);
     
     localStorage.setItem("cart", JSON.stringify(cart));
+    
+    // Verify the update was successful
+    const verifyCart = JSON.parse(localStorage.getItem("cart") || "[]");
+    console.log(`Verification: localStorage now contains:`, verifyCart);
+    console.log(`Verification: Product ${productId} appears ${verifyCart.filter(id => id == productId).length} times`);
     
     // Track analytics if backend was successful
     if (backendSuccess) {
@@ -928,18 +938,24 @@ async function clearCart() {
 function updateCartCount() {
   try {
     const cartCountElement = document.getElementById("cart-count");
-    if (!cartCountElement) return;
+    if (!cartCountElement) {
+      console.warn("Cart count element not found");
+      return;
+    }
     
     const cart = JSON.parse(localStorage.getItem("cart") || "[]");
     const count = cart.length;
     
     console.log(`updateCartCount: Cart has ${count} items:`, cart);
+    console.log(`updateCartCount: Updating element to show ${count}`);
     
     if (count > 0) {
       cartCountElement.textContent = count;
       cartCountElement.classList.remove("hidden");
+      console.log(`updateCartCount: Element updated successfully`);
     } else {
       cartCountElement.classList.add("hidden");
+      console.log(`updateCartCount: Element hidden (empty cart)`);
     }
   } catch (error) {
     console.error("Error updating cart count:", error);
@@ -1017,7 +1033,7 @@ function proceedToOrder() {
       showNotification("Redirecting to checkout...", "info");
       
       setTimeout(() => {
-        window.location.href = "order.html";
+      window.location.href = "order.html";
       }, 1000);
     } else {
       showNotification("Your cart is empty.", "warning");
