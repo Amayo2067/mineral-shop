@@ -16,7 +16,7 @@ j=d.createElement(s),dl=l!='dataLayer'?'&l='+l:'';j.async=true;j.src=
   </script>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Mineral Haven - Quartz Crystal</title>
+  <title>Mineral Haven - Lava Crystal</title>
   <script src="https://cdn.tailwindcss.com"></script>
   <script src="assets/script.js"></script>
 </head>
@@ -30,7 +30,10 @@ j=d.createElement(s),dl=l!='dataLayer'?'&l='+l:'';j.async=true;j.src=
         <a href="products2.html" class="px-2">Opal</a>
         <a href="products3.html" class="px-2">Cosmic</a>
         <a href="favorites.html" class="px-2">Favorites</a>
-        <a href="cart.html" class="px-2">Cart</a>
+        <a href="cart.html" class="px-2 relative">
+          Cart
+          <span id="cart-count" class="absolute -top-2 -right-2 bg-red-500 text-white text-xs rounded-full h-5 w-5 flex items-center justify-center hidden">0</span>
+        </a>
         <a href="register.html" class="px-2">Register</a>
         <a href="profile.html" class="px-2">Profile</a>
       </nav>
@@ -38,19 +41,41 @@ j=d.createElement(s),dl=l!='dataLayer'?'&l='+l:'';j.async=true;j.src=
   </header>
 
   <main class="container mx-auto p-6">
-    <h2 class="text-3xl font-bold mb-6">Lava Crystal</h2>
-    <div class="bg-white p-6 rounded shadow flex flex-col md:flex-row">
-      <img src="images/mineral2.png" alt="Lava Crystal" class="w-full md:w-1/2 h-64 object-cover rounded">
-      <div class="md:ml-6">
-        <p class="text-lg mb-4">Price: $70.00</p>
-        <p class="mb-4">A stunning clear Lava Crystal, perfect for collectors. Known for its clarity and energy properties.</p>
-        <button onclick="addToFavorites(1)" class="bg-blue-100 px-4 py-2 rounded hover:bg-blue-200">Add to Favorites</button>
-        <button onclick="addToCart(1)" class="bg-blue-300 text-white px-4 py-2 rounded hover:bg-blue-400 ml-2">Add to Cart</button>
+    <h2 class="text-3xl font-bold mb-6 text-center">Lava Crystal</h2>
+    <div class="bg-white p-8 rounded-lg shadow-lg max-w-4xl mx-auto">
+      <div class="flex flex-col md:flex-row gap-8">
+        <div class="md:w-1/2">
+          <img src="images/mineral2.png" alt="Lava Crystal" class="w-full h-80 object-cover rounded-lg shadow-md">
+        </div>
+        <div class="md:w-1/2">
+          <h3 class="text-2xl font-semibold text-gray-800 mb-4">Lava Crystal</h3>
+          <p class="text-3xl font-bold text-blue-600 mb-6">$70.00</p>
+          <p class="text-gray-600 mb-6 leading-relaxed">A stunning clear Lava Crystal, perfect for collectors. Known for its clarity and energy properties. This beautiful crystal is believed to enhance grounding and provide protection.</p>
+          
+          <div class="space-y-4">
+            <button onclick="addToFavorites(2)" class="w-full bg-gray-100 text-gray-800 px-6 py-3 rounded-lg hover:bg-gray-200 transition-colors font-medium">
+              ❤️ Add to Favorites
+            </button>
+            <button onclick="addToCart(2)" class="w-full bg-blue-600 text-white px-6 py-3 rounded-lg hover:bg-blue-700 transition-colors font-semibold">
+              🛒 Add to Cart
+            </button>
+          </div>
+          
+          <div class="mt-6 p-4 bg-blue-50 rounded-lg">
+            <h4 class="font-semibold text-blue-800 mb-2">Product Details</h4>
+            <ul class="text-sm text-gray-600 space-y-1">
+              <li>• Natural Lava Crystal</li>
+              <li>• High clarity and quality</li>
+              <li>• Perfect for collectors</li>
+              <li>• Grounding and protection properties</li>
+            </ul>
+          </div>
+        </div>
       </div>
     </div>
   </main>
 
-  <footer class="bg-blue-300 text-white p-4 text-center">
+  <footer class="bg-blue-300 text-white p-4 text-center mt-12">
     <p>© 2025 Mineral Haven. All rights reserved.</p>
   </footer>
 </body>

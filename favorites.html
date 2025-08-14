@@ -30,7 +30,10 @@ j=d.createElement(s),dl=l!='dataLayer'?'&l='+l:'';j.async=true;j.src=
         <a href="products2.html" class="px-2">Opal</a>
         <a href="products3.html" class="px-2">Cosmic</a>
         <a href="favorites.html" class="px-2">Favorites</a>
-        <a href="cart.html" class="px-2">Cart</a>
+        <a href="cart.html" class="px-2 relative">
+          Cart
+          <span id="cart-count" class="absolute -top-2 -right-2 bg-red-500 text-white text-xs rounded-full h-5 w-5 flex items-center justify-center hidden">0</span>
+        </a>
         <a href="register.html" class="px-2">Register</a>
         <a href="profile.html" class="px-2">Profile</a>
       </nav>
@@ -38,9 +41,15 @@ j=d.createElement(s),dl=l!='dataLayer'?'&l='+l:'';j.async=true;j.src=
   </header>
 
   <main class="container mx-auto p-6">
-    <h2 class="text-3xl font-bold mb-6">Your Favorites</h2>
-    <div id="favorites-list" class="grid grid-cols-1 md:grid-cols-3 gap-6">
-      <p class="text-lg">No favorites yet.</p>
+    <h2 class="text-3xl font-bold mb-6 text-center">Your Favorites</h2>
+    <div id="favorites-list" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+      <div class="col-span-full text-center">
+        <div class="animate-pulse">
+          <div class="bg-white p-8 rounded-lg shadow">
+            <div class="text-gray-500">Loading favorites...</div>
+          </div>
+        </div>
+      </div>
     </div>
   </main>
 
