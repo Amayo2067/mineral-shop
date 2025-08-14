@@ -107,43 +107,72 @@ async function addToCart(productId) {
   try {
     const username = localStorage.getItem("username");
     if (!username) {
-      alert("Please register to add items to cart!");
+      showNotification("Please register to add items to cart!", "error");
       return;
     }
     
-    // Add to backend
-    const response = await fetch(`${API_BASE_URL}/api/cart`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json'
-      },
-      body: JSON.stringify({ username, productId })
-    });
+    // Add to local storage first for immediate feedback
+    let cart = JSON.parse(localStorage.getItem("cart") || "[]");
+    cart.push(productId);
+    localStorage.setItem("cart", JSON.stringify(cart));
     
-    if (response.ok) {
-      // Add to local storage as backup
-      let cart = JSON.parse(localStorage.getItem("cart") || "[]");
-      cart.push(productId);
-      localStorage.setItem("cart", JSON.stringify(cart));
+    // Update cart count immediately
+    updateCartCount();
+    
+    // Show success message
+    showNotification("Added to cart!", "success");
+    
+    // Try to add to backend
+    try {
+      const response = await fetch(`${API_BASE_URL}/api/cart`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ username, productId })
+      });
       
-      analytics.track("Added to Cart", { productId: productId });
-      alert("Added to cart!");
-      
-      // Update cart count
-      updateCartCount();
-      
-      // If we're on the cart page, refresh the display
-          if (window.location.pathname.includes("cart.html")) {
-      await displayCart();
-      loadPromoCodeState(); // Load promo code state on cart page
+      if (response.ok) {
+        console.log("Successfully added to backend cart");
+        
+        // Track analytics
+        try {
+          analytics.track("Added to Cart", { productId: productId });
+        } catch (analyticsError) {
+          console.warn("Analytics tracking failed:", analyticsError);
+        }
+      } else {
+        const errorData = await response.json();
+        console.warn("Backend add to cart failed:", errorData);
+        showNotification(`Backend sync failed: ${errorData.message || 'Unknown error'}`, "warning");
+      }
+    } catch (backendError) {
+      console.warn("Backend request failed:", backendError);
+      showNotification("Backend unavailable, item saved locally", "warning");
     }
-    } else {
-      const errorData = await response.json();
-      alert(errorData.message || "Failed to add to cart");
+    
+    // If we're on the cart page, refresh the display
+    if (window.location.pathname.includes("cart.html")) {
+      try {
+        await displayCart();
+      } catch (displayError) {
+        console.error("Failed to refresh cart display:", displayError);
+      }
     }
+    
   } catch (error) {
     console.error("Error adding to cart:", error);
-    alert("Failed to add to cart. Please try again.");
+    showNotification("Failed to add to cart. Please try again.", "error");
+    
+    // Revert local storage change on error
+    try {
+      let cart = JSON.parse(localStorage.getItem("cart") || "[]");
+      cart = cart.filter(id => id !== productId);
+      localStorage.setItem("cart", JSON.stringify(cart));
+      updateCartCount();
+    } catch (revertError) {
+      console.error("Failed to revert cart change:", revertError);
+    }
   }
 }
 
@@ -351,6 +380,7 @@ async function displayCart() {
           const cartItem = document.createElement('div');
           cartItem.className = 'cart-item bg-white rounded-xl shadow-lg overflow-hidden fade-in';
           cartItem.style.animationDelay = `${index * 0.1}s`;
+          cartItem.setAttribute('data-product-id', id);
           
           cartItem.innerHTML = `
             <div class="relative">
@@ -458,6 +488,7 @@ async function displayCart() {
           const cartItem = document.createElement('div');
           cartItem.className = 'cart-item bg-white rounded-xl shadow-lg overflow-hidden fade-in';
           cartItem.style.animationDelay = `${index * 0.1}s`;
+          cartItem.setAttribute('data-product-id', id);
           
           cartItem.innerHTML = `
             <div class="relative">
@@ -543,13 +574,34 @@ async function displayCart() {
             <i class="fas fa-exclamation-triangle text-6xl text-red-300 mb-4"></i>
             <h3 class="text-2xl font-bold text-red-700 mb-2">Error Loading Cart</h3>
             <p class="text-red-600 mb-6">There was a problem loading your cart. Please try again.</p>
-            <button onclick="location.reload()" class="bg-red-600 text-white px-6 py-3 rounded-lg hover:bg-red-700 transition-colors">
-              <i class="fas fa-redo mr-2"></i>
-              Retry
-            </button>
+            <div class="space-y-2">
+              <button onclick="forceRefreshCart()" class="bg-blue-600 text-white px-6 py-3 rounded-lg hover:bg-blue-700 transition-colors w-full">
+                <i class="fas fa-redo mr-2"></i>
+                Retry
+              </button>
+              <button onclick="location.reload()" class="bg-gray-600 text-white px-6 py-3 rounded-lg hover:bg-gray-700 transition-colors w-full">
+                <i class="fas fa-refresh mr-2"></i>
+                Reload Page
+              </button>
+            </div>
+            <div class="mt-4 text-sm text-gray-500">
+              <p>Error details: ${error.message || 'Unknown error'}</p>
+              <p>Check console for more information.</p>
+            </div>
           </div>
         </div>
       `;
+    }
+    
+    // Also try to show cart summary if possible
+    try {
+      const cartSummary = document.getElementById("cart-summary");
+      const emptyCart = document.getElementById("empty-cart");
+      
+      if (cartSummary) cartSummary.classList.add("hidden");
+      if (emptyCart) emptyCart.classList.add("hidden");
+    } catch (summaryError) {
+      console.error("Failed to hide cart summary:", summaryError);
     }
   }
 }
@@ -563,7 +615,25 @@ async function removeFromCart(productId) {
     }
     
     // Find the cart item element to animate removal
-    const cartItem = document.querySelector(`[onclick*="removeFromCart(${productId})"]`).closest('.cart-item');
+    let cartItem = document.querySelector(`[onclick*="removeFromCart(${productId})"]`)?.closest('.cart-item');
+    
+    if (!cartItem) {
+      // Fallback if animation element not found
+      cartItem = document.querySelector(`[data-product-id="${productId}"]`)?.closest('.cart-item');
+    }
+    
+    if (!cartItem) {
+      // Fallback if animation element not found
+      const cartItems = document.querySelectorAll('.cart-item');
+      for (const item of cartItems) {
+        const itemId = item.querySelector('[onclick*="removeFromCart"]')?.getAttribute('onclick')?.match(/\d+/)?.[0];
+        if (itemId == productId) {
+          cartItem = item;
+          break;
+        }
+      }
+    }
+    
     if (cartItem) {
       // Add removal animation
       cartItem.style.transform = 'translateX(-100%)';
@@ -645,64 +715,127 @@ async function updateCartQuantity(productId, newQuantity) {
     }
     
     // Find the quantity display element to animate update
-    const cartItem = document.querySelector(`[onclick*="updateCartQuantity(${productId}"]`).closest('.cart-item');
-    const quantityDisplay = cartItem?.querySelector('.text-lg.font-bold.text-gray-800');
+    let cartItem = null;
+    let quantityDisplay = null;
     
-    if (quantityDisplay) {
-      // Add update animation
-      quantityDisplay.style.transform = 'scale(1.2)';
-      quantityDisplay.style.color = '#3B82F6';
-      quantityDisplay.style.transition = 'all 0.2s ease';
+    try {
+      // Try to find element by onclick attribute first
+      cartItem = document.querySelector(`[onclick*="updateCartQuantity(${productId}"]`)?.closest('.cart-item');
+      if (cartItem) {
+        quantityDisplay = cartItem.querySelector('.text-lg.font-bold.text-gray-800');
+      }
       
-      setTimeout(() => {
-        quantityDisplay.style.transform = 'scale(1)';
-        quantityDisplay.style.color = '#1F2937';
-      }, 200);
-    }
-    
-    // Update cart quantity on backend
-    const response = await fetch(`${API_BASE_URL}/api/cart/${username}/${productId}`, {
-      method: 'PUT',
-      headers: {
-        'Content-Type': 'application/json'
-      },
-      body: JSON.stringify({ quantity: newQuantity })
-    });
-    
-    if (response.ok) {
-      // Update local storage as backup
-      let cart = JSON.parse(localStorage.getItem("cart") || "[]");
-      
-      if (newQuantity === 0) {
-        cart = cart.filter(id => id !== productId);
-      } else {
-        // Remove existing instances and add new quantity
-        cart = cart.filter(id => id !== productId);
-        for (let i = 0; i < newQuantity; i++) {
-          cart.push(productId);
+      // If not found, try alternative selectors
+      if (!cartItem) {
+        cartItem = document.querySelector(`[data-product-id="${productId}"]`)?.closest('.cart-item');
+        if (cartItem) {
+          quantityDisplay = cartItem.querySelector('.text-lg.font-bold.text-gray-800');
         }
       }
       
-      localStorage.setItem("cart", JSON.stringify(cart));
-      
-      analytics.track("Updated Cart Quantity", { productId: productId, quantity: newQuantity });
-      showNotification(`Quantity updated to ${newQuantity}!`, "success");
-      
-      // Update cart count
-      updateCartCount();
-      
-      // Refresh cart display
-      await displayCart();
-      
-      // Check if cart is now empty and reset promo code if needed
-      resetPromoCodeIfCartEmpty();
-    } else {
-      const errorData = await response.json();
-      showNotification(errorData.message || "Failed to update cart quantity", "error");
+      // If still not found, try to find by product ID in the cart list
+      if (!cartItem) {
+        const cartItems = document.querySelectorAll('.cart-item');
+        for (const item of cartItems) {
+          const itemId = item.querySelector('[onclick*="updateCartQuantity"]')?.getAttribute('onclick')?.match(/\d+/)?.[0];
+          if (itemId == productId) {
+            cartItem = item;
+            quantityDisplay = item.querySelector('.text-lg.font-bold.text-gray-800');
+            break;
+          }
+        }
+      }
+    } catch (selectorError) {
+      console.warn("Could not find cart item element for animation:", selectorError);
     }
+    
+    // Add update animation if element found
+    if (quantityDisplay) {
+      try {
+        quantityDisplay.style.transform = 'scale(1.2)';
+        quantityDisplay.style.color = '#3B82F6';
+        quantityDisplay.style.transition = 'all 0.2s ease';
+        
+        setTimeout(() => {
+          if (quantityDisplay) {
+            quantityDisplay.style.transform = 'scale(1)';
+            quantityDisplay.style.color = '#1F2937';
+          }
+        }, 200);
+      } catch (animationError) {
+        console.warn("Animation failed:", animationError);
+      }
+    }
+    
+    // First, try to update on backend
+    let backendSuccess = false;
+    try {
+      const response = await fetch(`${API_BASE_URL}/api/cart/${username}/${productId}`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ quantity: newQuantity })
+      });
+      
+      if (response.ok) {
+        backendSuccess = true;
+        console.log("Backend update successful");
+      } else {
+        const errorData = await response.json();
+        console.warn("Backend update failed:", errorData);
+        showNotification(`Backend update failed: ${errorData.message || 'Unknown error'}`, "warning");
+      }
+    } catch (backendError) {
+      console.warn("Backend request failed:", backendError);
+      showNotification("Backend unavailable, using local storage", "warning");
+    }
+    
+    // Always update local storage as backup
+    let cart = JSON.parse(localStorage.getItem("cart") || "[]");
+    
+    if (newQuantity === 0) {
+      cart = cart.filter(id => id !== productId);
+    } else {
+      // Remove existing instances and add new quantity
+      cart = cart.filter(id => id !== productId);
+      for (let i = 0; i < newQuantity; i++) {
+        cart.push(productId);
+      }
+    }
+    
+    localStorage.setItem("cart", JSON.stringify(cart));
+    
+    // Track analytics if backend was successful
+    if (backendSuccess) {
+      try {
+        analytics.track("Updated Cart Quantity", { productId: productId, quantity: newQuantity });
+      } catch (analyticsError) {
+        console.warn("Analytics tracking failed:", analyticsError);
+      }
+    }
+    
+    showNotification(`Quantity updated to ${newQuantity}!`, "success");
+    
+    // Update cart count
+    updateCartCount();
+    
+    // Refresh cart display
+    await displayCart();
+    
+    // Check if cart is now empty and reset promo code if needed
+    resetPromoCodeIfCartEmpty();
+    
   } catch (error) {
     console.error("Error updating cart quantity:", error);
     showNotification("Failed to update cart quantity. Please try again.", "error");
+    
+    // Try to refresh display even if there was an error
+    try {
+      await displayCart();
+    } catch (refreshError) {
+      console.error("Failed to refresh cart display:", refreshError);
+    }
   }
 }
 
@@ -1271,3 +1404,116 @@ function resetPromoCodeIfCartEmpty() {
     }
   }
 }
+
+// Test cart functionality
+function testCartFunctionality() {
+  console.log("Testing cart functionality...");
+  
+  // Check if user is registered
+  const username = localStorage.getItem("username");
+  console.log("Username:", username);
+  
+  // Check cart contents
+  const cart = JSON.parse(localStorage.getItem("cart") || "[]");
+  console.log("Cart contents:", cart);
+  
+  // Check if cart elements exist
+  const cartList = document.getElementById("cart-list");
+  const cartSummary = document.getElementById("cart-summary");
+  const emptyCart = document.getElementById("empty-cart");
+  
+  console.log("Cart list element:", cartList);
+  console.log("Cart summary element:", cartSummary);
+  console.log("Empty cart element:", emptyCart);
+  
+  // Check if products are loaded
+  console.log("Products loaded:", products.length);
+  console.log("Products:", products);
+  
+  // Check API base URL
+  console.log("API base URL:", API_BASE_URL);
+  
+  return {
+    username,
+    cart,
+    elements: { cartList, cartSummary, emptyCart },
+    products: products.length,
+    apiUrl: API_BASE_URL
+  };
+}
+
+// Enhanced error handling for cart operations
+function handleCartError(operation, error, fallback = null) {
+  console.error(`Cart operation failed: ${operation}`, error);
+  
+  // Log detailed error information
+  if (error.response) {
+    console.error("Response status:", error.response.status);
+    console.error("Response data:", error.response.data);
+  }
+  
+  // Show user-friendly error message
+  let message = "An error occurred while processing your request.";
+  
+  if (error.message) {
+    message = error.message;
+  } else if (error.statusText) {
+    message = `Server error: ${error.statusText}`;
+  }
+  
+  showNotification(message, "error");
+  
+  // Execute fallback if provided
+  if (fallback && typeof fallback === 'function') {
+    try {
+      fallback();
+    } catch (fallbackError) {
+      console.error("Fallback function failed:", fallbackError);
+    }
+  }
+}
+
+// Force refresh cart display
+async function forceRefreshCart() {
+  try {
+    console.log("Force refreshing cart...");
+    
+    // Clear current display
+    const cartList = document.getElementById("cart-list");
+    if (cartList) {
+      cartList.innerHTML = `
+        <div class="col-span-full text-center">
+          <div class="animate-pulse">
+            <div class="bg-white p-8 rounded-xl shadow-lg">
+              <div class="text-gray-500 text-lg">
+                <i class="fas fa-spinner fa-spin text-2xl mb-3"></i>
+                <div>Refreshing cart...</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      `;
+    }
+    
+    // Wait a bit for visual feedback
+    await new Promise(resolve => setTimeout(resolve, 500));
+    
+    // Reload products if needed
+    if (products.length === 0) {
+      await loadProducts();
+    }
+    
+    // Refresh cart display
+    await displayCart();
+    
+    showNotification("Cart refreshed successfully!", "success");
+    
+  } catch (error) {
+    console.error("Failed to force refresh cart:", error);
+    showNotification("Failed to refresh cart", "error");
+  }
+}
+
+// Add this to the global scope for debugging
+window.forceRefreshCart = forceRefreshCart;
+window.testCartFunctionality = testCartFunctionality;
