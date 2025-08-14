@@ -266,6 +266,97 @@ app.get('/api/cart/:username', async (req, res) => {
   }
 });
 
+// Delete item from cart
+app.delete('/api/cart/:username/:productId', async (req, res) => {
+  const { username, productId } = req.params;
+  
+  try {
+    await pool.query(
+      'DELETE FROM cart WHERE username = $1 AND productId = $2',
+      [username, productId]
+    );
+    
+    analytics.track({
+      userId: username,
+      event: 'Removed from Cart',
+      properties: { productId: parseInt(productId) }
+    });
+    
+    res.json({ message: 'Removed from cart' });
+  } catch (err) {
+    console.error('Error removing from cart:', err.message);
+    res.status(500).json({ error: 'Failed to remove from cart' });
+  }
+});
+
+// Update cart quantity
+app.put('/api/cart/:username/:productId', async (req, res) => {
+  const { username, productId } = req.params;
+  const { quantity } = req.body;
+  
+  if (!quantity || quantity < 0) {
+    return res.status(400).json({ error: 'Valid quantity is required' });
+  }
+  
+  try {
+    if (quantity === 0) {
+      // Remove item if quantity is 0
+      await pool.query(
+        'DELETE FROM cart WHERE username = $1 AND productId = $2',
+        [username, productId]
+      );
+    } else {
+      // Remove existing instances and add new quantity
+      await pool.query(
+        'DELETE FROM cart WHERE username = $1 AND productId = $2',
+        [username, productId]
+      );
+      
+      // Add new quantity
+      for (let i = 0; i < quantity; i++) {
+        await pool.query(
+          'INSERT INTO cart (username, productId) VALUES ($1, $2)',
+          [username, productId]
+        );
+      }
+    }
+    
+    analytics.track({
+      userId: username,
+      event: 'Updated Cart Quantity',
+      properties: { productId: parseInt(productId), quantity: quantity }
+    });
+    
+    res.json({ message: 'Cart updated successfully' });
+  } catch (err) {
+    console.error('Error updating cart:', err.message);
+    res.status(500).json({ error: 'Failed to update cart' });
+  }
+});
+
+// Clear entire cart for a user
+app.delete('/api/cart/:username', async (req, res) => {
+  const { username } = req.params;
+  
+  try {
+    await pool.query(
+      'DELETE FROM cart WHERE username = $1',
+      [username]
+    );
+    
+    analytics.track({
+      userId: username,
+      event: 'Cart Cleared',
+      properties: { username: username }
+    });
+    
+    res.json({ message: 'Cart cleared successfully' });
+  } catch (err) {
+    console.error('Error clearing cart:', err.message);
+    res.status(500).json({ error: 'Failed to clear cart' });
+  }
+});
+
 app.post('/api/order', async (req, res) => {
   const { username } = req.body;
   if (!username) {

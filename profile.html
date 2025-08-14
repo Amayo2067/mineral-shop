@@ -30,7 +30,10 @@ j=d.createElement(s),dl=l!='dataLayer'?'&l='+l:'';j.async=true;j.src=
         <a href="products2.html" class="px-2">Opal</a>
         <a href="products3.html" class="px-2">Cosmic</a>
         <a href="favorites.html" class="px-2">Favorites</a>
-        <a href="cart.html" class="px-2">Cart</a>
+        <a href="cart.html" class="px-2 relative">
+          Cart
+          <span id="cart-count" class="absolute -top-2 -right-2 bg-red-500 text-white text-xs rounded-full h-5 w-5 flex items-center justify-center hidden">0</span>
+        </a>
         <a href="register.html" class="px-2">Register</a>
         <a href="profile.html" class="px-2">Profile</a>
       </nav>
@@ -38,10 +41,35 @@ j=d.createElement(s),dl=l!='dataLayer'?'&l='+l:'';j.async=true;j.src=
   </header>
 
   <main class="container mx-auto p-6">
-    <h2 class="text-3xl font-bold mb-6">Profile</h2>
-    <div class="bg-white p-6 rounded shadow">
-      <p class="text-lg">Welcome, <span id="username-display">User</span>!</p>
-      <p class="mt-4">Manage your account details here.</p>
+    <h2 class="text-3xl font-bold mb-6 text-center">Your Profile</h2>
+    <div class="bg-white p-8 rounded-lg shadow-lg max-w-2xl mx-auto">
+      <div class="text-center">
+        <div class="w-24 h-24 bg-blue-400 rounded-full mx-auto mb-4 flex items-center justify-center">
+          <span class="text-3xl font-bold text-white" id="username-initial">U</span>
+        </div>
+        <h3 class="text-2xl font-semibold mb-2">Welcome, <span id="username-display">User</span>!</h3>
+        <p class="text-gray-600 mb-6">Manage your account details and preferences here.</p>
+      </div>
+      
+      <div class="space-y-4">
+        <div class="flex justify-between items-center p-4 bg-gray-50 rounded">
+          <span class="font-medium">Username:</span>
+          <span id="username-value" class="text-blue-600"></span>
+        </div>
+        <div class="flex justify-between items-center p-4 bg-gray-50 rounded">
+          <span class="font-medium">Member since:</span>
+          <span class="text-gray-600">Today</span>
+        </div>
+      </div>
+      
+      <div class="mt-8 flex justify-center space-x-4">
+        <a href="favorites.html" class="bg-blue-600 text-white px-6 py-3 rounded-lg hover:bg-blue-700 transition-colors">
+          View Favorites
+        </a>
+        <a href="cart.html" class="bg-green-600 text-white px-6 py-3 rounded-lg hover:bg-green-700 transition-colors">
+          View Cart
+        </a>
+      </div>
     </div>
   </main>
 
