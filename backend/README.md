@@ -1,0 +1,2 @@
+# mineral-shop
+segmtest

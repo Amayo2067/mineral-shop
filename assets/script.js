@@ -5,63 +5,140 @@ analytics.load("YOUR_WRITE_KEY"); // Replace with your Segment Write Key
 analytics.page();
 }}();
 
-const products = [
-  { id: 1, name: "Opal Crystal", price: 50.00, image: "images/mineral1.png", description: "A stunning clear quartz crystal, perfect for collectors." },
-  { id: 2, name: "Lava Geode", price: 70.00, image: "images/mineral2.png", description: "A vibrant amethyst geode with deep purple hues." },
-  { id: 3, name: "Ocean Quartz", price: 30.00, image: "images/mineral3.png", description: "A soft pink rose quartz, symbolizing love." },
-  { id: 4, name: "Thunder Cluster", price: 40.00, image: "images/mineral4.png", description: "A bright citrine cluster, radiating positivity." },
-  { id: 5, name: "Moss Stone", price: 90.00, image: "images/mineral5.png", description: "A sleek black obsidian stone, grounding and protective." },
+// API base URL - change this to your Render URL when deployed
+const API_BASE_URL = 'https://mineral-shop.onrender.com';
 
-];
+// Products array - will be populated from backend
+let products = [];
 
-function trackProductView(productId) {
+// Load products from backend
+async function loadProducts() {
   try {
+    const response = await fetch(`${API_BASE_URL}/api/products`);
+    if (response.ok) {
+      products = await response.json();
+      console.log('Products loaded from backend:', products);
+    } else {
+      console.error('Failed to load products from backend');
+    }
+  } catch (error) {
+    console.error('Error loading products:', error);
+    // Fallback to default products if backend is not available
+    products = [
+      { id: 1, name: "Opal Crystal", price: 50.00, image: "https://mineral-shop.onrender.com/images/mineral1.png", description: "A stunning clear quartz crystal, perfect for collectors." },
+      { id: 2, name: "Lava Geode", price: 70.00, image: "https://mineral-shop.onrender.com/images/mineral2.png", description: "A vibrant amethyst geode with deep purple hues." },
+      { id: 3, name: "Ocean Quartz", price: 30.00, image: "https://mineral-shop.onrender.com/images/mineral3.png", description: "A soft pink rose quartz, symbolizing love." },
+      { id: 4, name: "Thunder Cluster", price: 40.00, image: "https://mineral-shop.onrender.com/images/mineral4.png", description: "A bright citrine cluster, radiating positivity." },
+      { id: 5, name: "Moss Stone", price: 90.00, image: "https://mineral-shop.onrender.com/images/mineral5.png", description: "A sleek black obsidian stone, grounding and protective." }
+    ];
+  }
+}
+
+async function trackProductView(productId) {
+  try {
+    // Track locally
     let viewCounts = JSON.parse(localStorage.getItem("viewCounts") || "{}");
     viewCounts[productId] = (viewCounts[productId] || 0) + 1;
     localStorage.setItem("viewCounts", JSON.stringify(viewCounts));
+    
+    // Track on backend
+    const username = localStorage.getItem("username") || "anonymous";
+    const response = await fetch(`${API_BASE_URL}/api/view/${productId}`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({ username })
+    });
+    
+    if (response.ok) {
+      const data = await response.json();
+      console.log('View tracked on backend:', data);
+    }
+    
     analytics.track("Product Viewed", { productId: productId, viewCount: viewCounts[productId] });
   } catch (error) {
     console.error("Error tracking product view:", error);
   }
 }
 
-function addToFavorites(productId) {
+async function addToFavorites(productId) {
   try {
-    let favorites = JSON.parse(localStorage.getItem("favorites") || "[]");
-    if (!favorites.includes(productId)) {
-      favorites.push(productId);
-      localStorage.setItem("favorites", JSON.stringify(favorites));
-      analytics.track("Added to Favorites", { productId: productId });
-      alert("Added to favorites!");
+    const username = localStorage.getItem("username");
+    if (!username) {
+      alert("Please register to add favorites!");
+      return;
+    }
+    
+    // Add to backend
+    const response = await fetch(`${API_BASE_URL}/api/favorites`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({ username, productId })
+    });
+    
+    if (response.ok) {
+      const data = await response.json();
+      if (data.message === 'Added to favorites') {
+        // Add to local storage as backup
+        let favorites = JSON.parse(localStorage.getItem("favorites") || "[]");
+        if (!favorites.includes(productId)) {
+          favorites.push(productId);
+          localStorage.setItem("favorites", JSON.stringify(favorites));
+        }
+        analytics.track("Added to Favorites", { productId: productId });
+        alert("Added to favorites!");
+      } else {
+        alert(data.message);
+      }
     } else {
-      alert("This product is already in your favorites!");
+      const errorData = await response.json();
+      alert(errorData.message || "Failed to add to favorites");
     }
   } catch (error) {
     console.error("Error adding to favorites:", error);
+    alert("Failed to add to favorites. Please try again.");
   }
 }
 
-function addToCart(productId) {
-  let cart = JSON.parse(localStorage.getItem("cart") || "[]");
-  cart.push(productId);
-  localStorage.setItem("cart", JSON.stringify(cart));
-  analytics.track("Added to Cart", { productId: productId });
-  alert("Added to cart!");
-}
-
-function addToCart(productId) {
+async function addToCart(productId) {
   try {
-    let cart = JSON.parse(localStorage.getItem("cart") || "[]");
-    cart.push(productId);
-    localStorage.setItem("cart", JSON.stringify(cart));
-    analytics.track("Added to Cart", { productId: productId });
-    alert("Added to cart!");
+    const username = localStorage.getItem("username");
+    if (!username) {
+      alert("Please register to add items to cart!");
+      return;
+    }
+    
+    // Add to backend
+    const response = await fetch(`${API_BASE_URL}/api/cart`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({ username, productId })
+    });
+    
+    if (response.ok) {
+      // Add to local storage as backup
+      let cart = JSON.parse(localStorage.getItem("cart") || "[]");
+      cart.push(productId);
+      localStorage.setItem("cart", JSON.stringify(cart));
+      
+      analytics.track("Added to Cart", { productId: productId });
+      alert("Added to cart!");
+    } else {
+      const errorData = await response.json();
+      alert(errorData.message || "Failed to add to cart");
+    }
   } catch (error) {
     console.error("Error adding to cart:", error);
+    alert("Failed to add to cart. Please try again.");
   }
 }
 
-function registerUser() {
+async function registerUser() {
   try {
     const usernameInput = document.getElementById("username");
     if (!usernameInput) {
@@ -71,10 +148,24 @@ function registerUser() {
     }
     const username = usernameInput.value.trim();
     if (username) {
-      localStorage.setItem("username", username);
-      analytics.identify(username);
-      console.log("User registered:", username);
-      window.location.href = "profile.html";
+      // Register on backend
+      const response = await fetch(`${API_BASE_URL}/api/register`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ username })
+      });
+      
+      if (response.ok) {
+        localStorage.setItem("username", username);
+        analytics.identify(username);
+        console.log("User registered:", username);
+        window.location.href = "profile.html";
+      } else {
+        const errorData = await response.json();
+        alert(errorData.message || "Registration failed");
+      }
     } else {
       alert("Please enter a username.");
       console.warn("Username input is empty");
@@ -86,72 +177,198 @@ function registerUser() {
 }
 
 
-function displayFavorites() {
+async function displayFavorites() {
   try {
     const favoritesList = document.getElementById("favorites-list");
     if (!favoritesList) {
       console.error("Favorites list element not found on page");
       return;
     }
-    const favorites = JSON.parse(localStorage.getItem("favorites") || "[]");
-    favoritesList.innerHTML = "";
-    if (favorites.length === 0) {
-      favoritesList.innerHTML = "<p class='text-lg'>No favorites yet.</p>";
+    
+    const username = localStorage.getItem("username");
+    if (!username) {
+      favoritesList.innerHTML = "<p class='text-lg'>Please register to view favorites.</p>";
       return;
     }
-    favorites.forEach(id => {
-      const product = products.find(p => p.id === id);
-      if (product) {
-        favoritesList.innerHTML += `
-          <div class="bg-white p-4 rounded shadow">
-            <a href="product${id}.html" onclick="trackProductView(${id})">
-              <img src="${product.image}" alt="${product.name}" class="w-full h-48 object-cover rounded">
-              <h4 class="text-xl font-semibold mt-2">${product.name}</h4>
-              <p>$${product.price.toFixed(2)}</p>
-            </a>
-            <button onclick="addToCart(${id})" class="mt-2 bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700">Add to Cart</button>
-          </div>
-        `;
-      } else {
-        console.warn(`Product with ID ${id} not found in products array`);
+    
+    // Get favorites from backend
+    const response = await fetch(`${API_BASE_URL}/api/favorites/${username}`);
+    if (response.ok) {
+      const favorites = await response.json();
+      favoritesList.innerHTML = "";
+      if (favorites.length === 0) {
+        favoritesList.innerHTML = "<p class='text-lg'>No favorites yet.</p>";
+        return;
       }
-    });
+      
+      favorites.forEach(id => {
+        const product = products.find(p => p.id === id);
+        if (product) {
+          favoritesList.innerHTML += `
+            <div class="bg-white p-4 rounded shadow">
+              <a href="product${id}.html" onclick="trackProductView(${id})">
+                <img src="${product.image}" alt="${product.name}" class="w-full h-48 object-cover rounded">
+                <h4 class="text-xl font-semibold mt-2">${product.name}</h4>
+                <p>$${product.price.toFixed(2)}</p>
+              </a>
+              <button onclick="addToCart(${id})" class="mt-2 bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700">Add to Cart</button>
+            </div>
+          `;
+        } else {
+          console.warn(`Product with ID ${id} not found in products array`);
+        }
+      });
+    } else {
+      // Fallback to localStorage
+      const favorites = JSON.parse(localStorage.getItem("favorites") || "[]");
+      favoritesList.innerHTML = "";
+      if (favorites.length === 0) {
+        favoritesList.innerHTML = "<p class='text-lg'>No favorites yet.</p>";
+        return;
+      }
+      favorites.forEach(id => {
+        const product = products.find(p => p.id === id);
+        if (product) {
+          favoritesList.innerHTML += `
+            <div class="bg-white p-4 rounded shadow">
+              <a href="product${id}.html" onclick="trackProductView(${id})">
+                <img src="${product.image}" alt="${product.name}" class="w-full h-48 object-cover rounded">
+                <h4 class="text-xl font-semibold mt-2">${product.name}</h4>
+                <p>$${product.price.toFixed(2)}</p>
+              </a>
+              <button onclick="addToCart(${id})" class="mt-2 bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700">Add to Cart</button>
+            </div>
+          `;
+        } else {
+          console.warn(`Product with ID ${id} not found in products array`);
+        }
+      });
+    }
   } catch (error) {
     console.error("Error displaying favorites:", error);
+    // Fallback to localStorage
+    const favorites = JSON.parse(localStorage.getItem("favorites") || "[]");
+    const favoritesList = document.getElementById("favorites-list");
+    if (favoritesList) {
+      favoritesList.innerHTML = "";
+      if (favorites.length === 0) {
+        favoritesList.innerHTML = "<p class='text-lg'>No favorites yet.</p>";
+        return;
+      }
+      favorites.forEach(id => {
+        const product = products.find(p => p.id === id);
+        if (product) {
+          favoritesList.innerHTML += `
+            <div class="bg-white p-4 rounded shadow">
+              <a href="product${id}.html" onclick="trackProductView(${id})">
+                <img src="${product.image}" alt="${product.name}" class="w-full h-48 object-cover rounded">
+                <h4 class="text-xl font-semibold mt-2">${product.name}</h4>
+                <p>$${product.price.toFixed(2)}</p>
+              </a>
+              <button onclick="addToCart(${id})" class="mt-2 bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700">Add to Cart</button>
+            </div>
+          `;
+        } else {
+          console.warn(`Product with ID ${id} not found in products array`);
+        }
+      });
+    }
   }
 }
 
-function displayCart() {
+async function displayCart() {
   try {
     const cartList = document.getElementById("cart-list");
     if (!cartList) {
       console.error("Cart list element not found on page");
       return;
     }
-    const cart = JSON.parse(localStorage.getItem("cart") || "[]");
-    cartList.innerHTML = "";
-    if (cart.length === 0) {
-      cartList.innerHTML = "<p class='text-lg'>Your cart is empty.</p>";
+    
+    const username = localStorage.getItem("username");
+    if (!username) {
+      cartList.innerHTML = "<p class='text-lg'>Please register to view cart.</p>";
       return;
     }
-    cart.forEach(id => {
-      const product = products.find(p => p.id === id);
-      if (product) {
-        cartList.innerHTML += `
-          <div class="bg-white p-4 rounded shadow">
-            <a href="product${id}.html" onclick="trackProductView(${id})">
-              <img src="${product.image}" alt="${product.name}" class="w-full h-48 object-cover rounded">
-              <h4 class="text-xl font-semibold mt-2">${product.name}</h4>
-              <p>$${product.price.toFixed(2)}</p>
-            </a>
-          </div>
-        `;
-      } else {
-        console.warn(`Product with ID ${id} not found in products array`);
+    
+    // Get cart from backend
+    const response = await fetch(`${API_BASE_URL}/api/cart/${username}`);
+    if (response.ok) {
+      const cart = await response.json();
+      cartList.innerHTML = "";
+      if (cart.length === 0) {
+        cartList.innerHTML = "<p class='text-lg'>Your cart is empty.</p>";
+        return;
       }
-    });
+      
+      cart.forEach(id => {
+        const product = products.find(p => p.id === id);
+        if (product) {
+          cartList.innerHTML += `
+            <div class="bg-white p-4 rounded shadow">
+              <a href="product${id}.html" onclick="trackProductView(${id})">
+                <img src="${product.image}" alt="${product.name}" class="w-full h-48 object-cover rounded">
+                <h4 class="text-xl font-semibold mt-2">${product.name}</h4>
+                <p>$${product.price.toFixed(2)}</p>
+              </a>
+            </div>
+          `;
+        } else {
+          console.warn(`Product with ID ${id} not found in products array`);
+        }
+      });
+    } else {
+      // Fallback to localStorage
+      const cart = JSON.parse(localStorage.getItem("cart") || "[]");
+      cartList.innerHTML = "";
+      if (cart.length === 0) {
+        cartList.innerHTML = "<p class='text-lg'>Your cart is empty.</p>";
+        return;
+      }
+      cart.forEach(id => {
+        const product = products.find(p => p.id === id);
+        if (product) {
+          cartList.innerHTML += `
+            <div class="bg-white p-4 rounded shadow">
+              <a href="product${id}.html" onclick="trackProductView(${id})">
+                <img src="${product.image}" alt="${product.name}" class="w-full h-48 object-cover rounded">
+                <h4 class="text-xl font-semibold mt-2">${product.name}</h4>
+                <p>$${product.price.toFixed(2)}</p>
+              </a>
+            </div>
+          `;
+        } else {
+          console.warn(`Product with ID ${id} not found in products array`);
+        }
+      });
+    }
   } catch (error) {
     console.error("Error displaying cart:", error);
+    // Fallback to localStorage
+    const cart = JSON.parse(localStorage.getItem("cart") || "[]");
+    const cartList = document.getElementById("cart-list");
+    if (cartList) {
+      cartList.innerHTML = "";
+      if (cart.length === 0) {
+        cartList.innerHTML = "<p class='text-lg'>Your cart is empty.</p>";
+        return;
+      }
+      cart.forEach(id => {
+        const product = products.find(p => p.id === id);
+        if (product) {
+          cartList.innerHTML += `
+            <div class="bg-white p-4 rounded shadow">
+              <a href="product${id}.html" onclick="trackProductView(${id})">
+                <img src="${product.image}" alt="${product.name}" class="w-full h-48 object-cover rounded">
+                <h4 class="text-xl font-semibold mt-2">${product.name}</h4>
+                <p>$${product.price.toFixed(2)}</p>
+              </a>
+            </div>
+          `;
+        } else {
+          console.warn(`Product with ID ${id} not found in products array`);
+        }
+      });
+    }
   }
 }
 
@@ -265,8 +482,11 @@ function displayMostViewed() {
   }
 }
 
-window.onload = function() {
+window.onload = async function() {
   try {
+    // Load products from backend first
+    await loadProducts();
+    
     if (window.location.pathname.includes("profile.html")) {
       const username = localStorage.getItem("username");
       if (!username) {
@@ -283,10 +503,10 @@ window.onload = function() {
       }
     }
     if (window.location.pathname.includes("favorites.html")) {
-      displayFavorites();
+      await displayFavorites();
     }
     if (window.location.pathname.includes("cart.html")) {
-      displayCart();
+      await displayCart();
     }
     if (window.location.pathname.includes("order.html")) {
       displayOrderSummary();
