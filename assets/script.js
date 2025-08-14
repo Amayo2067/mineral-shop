@@ -366,6 +366,9 @@ async function displayCart() {
         cartCounts[id] = (cartCounts[id] || 0) + 1;
       });
       
+      console.log(`Backend cart data:`, cart);
+      console.log(`Calculated cart counts:`, cartCounts);
+      
       let totalPrice = 0;
       let totalItems = 0;
       
@@ -477,6 +480,9 @@ async function displayCart() {
       cart.forEach(id => {
         cartCounts[id] = (cartCounts[id] || 0) + 1;
       });
+      
+      console.log(`localStorage cart data:`, cart);
+      console.log(`Calculated cart counts (localStorage):`, cartCounts);
       
       let totalPrice = 0;
       let totalItems = 0;
@@ -804,6 +810,8 @@ async function updateCartQuantity(productId, newQuantity) {
     // Always update local storage as backup
     let cart = JSON.parse(localStorage.getItem("cart") || "[]");
     
+    console.log(`Before update: Cart had ${cart.filter(id => id == productId).length} instances of product ${productId}`);
+    
     if (newQuantity === 0) {
       cart = cart.filter(id => id !== productId);
     } else {
@@ -813,6 +821,9 @@ async function updateCartQuantity(productId, newQuantity) {
         cart.push(productId);
       }
     }
+    
+    console.log(`After update: Cart now has ${cart.filter(id => id == productId).length} instances of product ${productId}`);
+    console.log(`Updated cart:`, cart);
     
     localStorage.setItem("cart", JSON.stringify(cart));
     
